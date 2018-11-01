@@ -373,7 +373,7 @@ def write_dataset(src, tgt, ctx):
 
     session = ctx["session"]
 
-    if True:
+    try:
         it = ChunkIterator(tgt)
 
         futures = []
@@ -397,8 +397,8 @@ def write_dataset(src, tgt, ctx):
                 futures = []
         # send off any remaining chnks
         loop.run_until_complete(asyncio.gather(*futures))
-    #except Exception as e:
-    #    logging.error(f"got Exception: {e}")
+    except Exception as e:
+        logging.error(f"got Exception: {e}")
   
     
     msg = "done with dataload for {}".format(src.name)
