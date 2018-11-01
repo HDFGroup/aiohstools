@@ -366,18 +366,11 @@ def write_dataset(src, tgt, ctx):
     logging.info(msg)
     if ctx["verbose"]:
         print(msg)
-    auth = aiohttp.BasicAuth(login=ctx["username"], password=ctx["password"])
     url = f"{ctx['endpoint']}/datasets/{dsetid}/value"
     logging.debug(f"url: {url}")
-    headers = {}
-    headers['Content-Type'] = "application/octet-stream"
-    
-    logging.debug(f"headers:{headers}")
 
     loop = ctx["loop"]
 
-    if "session" not in ctx:
-        ctx["session"] = aiohttp.ClientSession(auth=auth, headers=headers, loop=loop, connector=aiohttp.TCPConnector(limit=MAX_TASKS))
     session = ctx["session"]
 
     if True:
@@ -519,8 +512,15 @@ def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=No
     ctx["endpoint"] = endpoint
     ctx["username"] = username
     ctx["password"] = password
-    ctx["loop"] = asyncio.get_event_loop()
-     
+
+    loop = asyncio.get_event_loop()
+    ctx["loop"] = loop
+    connector = aiohttp.TCPConnector(limit=MAX_TASKS)
+
+    auth = aiohttp.BasicAuth(login=username, password=password)
+    headers = {'Content-Type': "application/octet-stream" }
+    session = aiohttp.ClientSession(auth=auth, headers=headers, loop=loop, connector=connector)
+    ctx["session"] = session 
 
     # create any root attributes
     for ga in fin.attrs:
@@ -571,7 +571,15 @@ def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=No
     # close up the source domain, see reason(s) for this below
     fin.close() 
 
-    if verbose or True:
+    if verbose:
+        print("closing session")
+    loop.run_until_complete(session.close())
+
+    if verbose:
+        print("closing connector")
+    connector.close()
+
+    if verbose:
         print("closing loop")
     loop = ctx["loop"]
     loop.close()
