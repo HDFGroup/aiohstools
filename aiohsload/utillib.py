@@ -15,7 +15,6 @@ import aiohttp
 import logging
 import asyncio
 
-MAX_TASKS = 10
     
 try:
     import h5py 
@@ -392,7 +391,7 @@ def write_dataset(src, tgt, ctx):
             params["selection"] = selection
 
             futures.append(write_chunk(session, url, params, arr))
-            if len(futures) >= MAX_TASKS:
+            if len(futures) >= ctx["maxtasks"]:
                 loop.run_until_complete(asyncio.gather(*futures))
                 futures = []
         # send off any remaining chnks
@@ -496,7 +495,7 @@ def create_datatype(obj, ctx):
 # create_datatype
       
 #----------------------------------------------------------------------------------
-def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=None, username=None, password=None):
+def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=None, username=None, password=None, maxtasks=10):
     logging.info("input file: {}".format(fin.filename))   
     logging.info("output file: {}".format(fout.filename))
      
@@ -512,10 +511,11 @@ def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=No
     ctx["endpoint"] = endpoint
     ctx["username"] = username
     ctx["password"] = password
+    ctx["maxtasks"] = maxtasks
 
     loop = asyncio.get_event_loop()
     ctx["loop"] = loop
-    connector = aiohttp.TCPConnector(limit=MAX_TASKS)
+    connector = aiohttp.TCPConnector(limit=maxtasks)
 
     auth = aiohttp.BasicAuth(login=username, password=password)
     headers = {'Content-Type': "application/octet-stream" }

@@ -100,6 +100,7 @@ def usage():
     print("     --nodata :: Do not upload dataset data")
     print("     -4 :: Force ipv4 for any file staging (doesn\'t set hsds loading net)")
     print("     -6 :: Force ipv6 (see -4)")
+    print("     -n[count] :: maximum number of tasks to use")
     print("     -h | --help    :: This message.")
     print("")
 #end print_usage
@@ -125,6 +126,7 @@ def main():
     cfg["logfname"] = None
     logfname=None
     ipvfam=None
+    maxtasks = 10
 
     src_files = []
     argn = 1
@@ -191,12 +193,24 @@ def main():
                     sys.exit(-1)
             deflate = compressLevel
             argn += 1
+        elif arg.startswith("-n"):
+            if len(arg) > 2:
+                try:
+                    maxtasks = int(arg[2:])
+                except ValueError:
+                    print("Max tasks must be an integer")
+                    sys.exit(-1)
+            else:
+                usage()
+                sys.exit(-1)
+            argn += 1
         elif arg[0] == '-':
             usage()
             sys.exit(-1)
         else:
             src_files.append(arg)
             argn += 1
+
 
     # setup logging
     logging.basicConfig(filename=logfname, format='%(asctime)s %(filename)s:%(lineno)d %(message)s', level=loglevel)
@@ -271,7 +285,7 @@ def main():
                 sys.exit(1)
  
             # do the actual load
-            load_file(fin, fout, verbose=verbose, nodata=nodata, deflate=deflate, endpoint=endpoint, username=username, password=password)
+            load_file(fin, fout, verbose=verbose, nodata=nodata, deflate=deflate, endpoint=endpoint, username=username, password=password, maxtasks=maxtasks)
 
             # cleanup if needed
             if istmp:
