@@ -126,7 +126,7 @@ def main():
     cfg["logfname"] = None
     logfname=None
     ipvfam=None
-    maxtasks = 10
+    maxtasks = 25
 
     src_files = []
     argn = 1
