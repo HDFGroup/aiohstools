@@ -106,8 +106,6 @@ def convert_dtype(srcdt, ctx):
     
     msg = "convert dtype: {}, type: {},".format(srcdt, type(srcdt))
     logging.info(msg)
-    if ctx["verbose"]:
-        print(msg)
      
     if len(srcdt) > 0:
         fields = []
@@ -440,17 +438,15 @@ async def write_chunk(session, url, params, arr):
     #self.PUT(req, body=body, format=format, params=params)
 
 #----------------------------------------------------------------------------------
-def create_group(gobj, ctx):
-    msg = "creating group {}".format(gobj.name)
-    logging.info(msg)
+
+def create_links(gsrc, gdes, ctx):
+    # add soft and external links
     if ctx["verbose"]:
-        print(msg)
-    fout = ctx["fout"]
-    grp = fout.create_group(gobj.name)
- 
-    # create any soft/external links
-    for title in gobj:
-        lnk = gobj.get(title, getlink=True)
+        print("create_links: {}".format(gsrc.name))
+    for title in gsrc:
+        if ctx["verbose"]:
+            print("got link: {}".format(title))
+        lnk = gsrc.get(title, getlink=True)
         link_classname = lnk.__class__.__name__
         if link_classname == "HardLink":
             logging.debug("Got hardlink: {}".format(title))
@@ -460,26 +456,39 @@ def create_group(gobj, ctx):
             if ctx["verbose"]:
                 print(msg)
             logging.info(msg)
-            if is_h5py(fout):
+            if is_h5py(gdes):
                 soft_link = h5py.SoftLink(lnk.path)
             else:
                 soft_link = h5pyd.SoftLink(lnk.path)
-            grp[title] = soft_link
+            gdes[title] = soft_link
         elif link_classname == "ExternalLink":
             msg = "creating ExternalLink({}, {}) with title: {}".format(lnk.filename, lnk.path, title)
             if ctx["verbose"]:
                 print(msg)
             logging.info(msg)
-            if is_h5py(fout):
+            if is_h5py(gdes):
                 ext_link = h5py.ExternalLink(lnk.filename, lnk.path)
             else:
                 ext_link = h5pyd.ExternalLink(lnk.filename, lnk.path)
-            grp[title] = ext_link
+            gdes[title] = ext_link
         else:
             msg = "Unexpected link type: {}".format(lnk.__class__.__name__)
             logging.warning(msg)
             if ctx["verbose"]:
                 print(msg)
+
+def create_group(gobj, ctx):
+    msg = "creating group {}".format(gobj.name)
+    logging.info(msg)
+    if ctx["verbose"]:
+        print(msg)
+    fout = ctx["fout"]
+    grp = fout.create_group(gobj.name)
+
+    # create any soft/external links
+    create_links(gobj, grp, ctx)
+ 
+   
 # create_group
 
 #----------------------------------------------------------------------------------
@@ -525,6 +534,9 @@ def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=No
     # create any root attributes
     for ga in fin.attrs:
         copy_attribute(fout, ga, fin, ctx)
+
+    # create root soft/external links
+    create_links(fin, fout, ctx)
 
     def object_create_helper(name, obj):
         class_name = obj.__class__.__name__
