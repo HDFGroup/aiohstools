@@ -383,10 +383,10 @@ def write_dataset(src, tgt, ctx):
             
             arr = src[s]
             selection = getSliceQueryParam(s)
-            logging.debug(f"selection:{selection}")
+            logging.debug(f"select:{selection}")
             params = {}
             params["domain"] = domain
-            params["selection"] = selection
+            params["select"] = selection
 
             futures.append(write_chunk(session, url, params, arr))
             if len(futures) >= ctx["maxtasks"]:
@@ -421,7 +421,7 @@ def getSliceQueryParam(sel):
 
 async def write_chunk(session, url, params, arr):
     # TBD: do normal h5yd write for vlen data
-    msg = f"writing chunk for slice: {params['selection']}"
+    msg = f"writing chunk for slice: {params['select']}"
     logging.info(msg)
     data = arr.tobytes()
     
@@ -429,6 +429,8 @@ async def write_chunk(session, url, params, arr):
     try:
         async with session.put(url, data=data, params=params) as rsp:
             logging.info("status: {}".format(rsp.status))
+            if rsp.status != 200:
+                raise IOError(f"expected status 200 but got {rsp.status}")
     except ConnectionError as ce:
         logging.error("connection error: {}".format(ce))
         raise IOError("Connection Error")
@@ -507,6 +509,8 @@ def create_datatype(obj, ctx):
 def load_file(fin, fout, verbose=False, nodata=False, deflate=None,  endpoint=None, username=None, password=None, maxtasks=10):
     logging.info("input file: {}".format(fin.filename))   
     logging.info("output file: {}".format(fout.filename))
+
+    print(f"load_file, maxtasks: {maxtasks}")
      
     # it would be nice to make a class out of these functions, but that 
     # makes it heard to use visititems iterator.
